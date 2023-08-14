@@ -3,9 +3,9 @@
 # Example command run: python3 extract_ra_dec.py /path/to/files/
 #
 # Example output:
-# 6249Jennifer-020_R180 14:54:51.60 +01:32:00.23
-# 6249Jennifer-021_R180 14:56:01.97 +00:54:37.25
-# 6249Jennifer-022_R180 14:54:11.06 +01:01:13.46
+# 6249Jennifer-020_R180 14 54 51.60 +01 32 00.23
+# 6249Jennifer-021_R180 14 56 01.97 +00 54 37.25
+# 6249Jennifer-022_R180 14 54 11.06 +01 01 13.46
 
 
 import os
@@ -17,13 +17,13 @@ import astropy.units as u
 
 def decimal_to_hms(decimal_value):
     ra_angle = Angle(decimal_value, unit=u.deg)
-    ra_hms = ra_angle.to_string(unit=u.hourangle, sep=':', pad=True, precision=2)
+    ra_hms = ra_angle.to_string(unit=u.hourangle, sep=' ', pad=True, precision=2)
     return ra_hms
 
 
 def decimal_to_dms(decimal_value):
     dec_angle = Angle(decimal_value, unit=u.deg)
-    dec_dms = dec_angle.to_string(unit=u.deg, sep=':', pad=True, precision=2, alwayssign=True)
+    dec_dms = dec_angle.to_string(unit=u.deg, sep=' ', pad=True, precision=2, alwayssign=True)
     return dec_dms
 
 
