@@ -23,7 +23,7 @@ def decimal_to_hms(decimal_value):
 
 def decimal_to_dms(decimal_value):
     dec_angle = Angle(decimal_value, unit=u.deg)
-    dec_dms = dec_angle.to_string(unit=u.deg, sep=' ', pad=True, precision=2, alwayssign=True)
+    dec_dms = dec_angle.to_string(unit=u.deg, sep=' ', pad=True, precision=2, alwayssign=True, decimal=False)
     return dec_dms
 
 
@@ -47,5 +47,9 @@ for file in file_names:
 
             # print(filename, ra, dec)
 
+            with open('extraction_data', 'a+') as extract_file:
+                extract_file.write(f"{filename} {ra} {dec}")
+
 for file, dict_ra_dec in dictionary_ra_dec.items():
     print(file, dict_ra_dec['ra'], dict_ra_dec['dec'])
+
