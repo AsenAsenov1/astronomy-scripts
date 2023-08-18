@@ -18,7 +18,7 @@ fi
 # Loop through files in the directory and remove whitespace characters from filenames
 for file in "$directory"/*; do
     if [ -f "$file" ]; then
-        new_file=$(echo "$file" | tr -d '[:space:]')
+        new_file=$(echo "$file" | tr -d '()' | sed 's/ /_/')
         mv "$file" "$new_file"
         echo "Renamed: $file to $new_file"
     fi
