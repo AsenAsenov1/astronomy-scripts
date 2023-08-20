@@ -19,7 +19,11 @@ fi
 for file in "$directory"/*; do
     if [ -f "$file" ]; then
         new_file=$(echo "$file" | tr -d '()' | sed 's/ /_/')
-        mv "$file" "$new_file"
-        echo "Renamed: $file to $new_file"
+		if [ ! "$file" = "$new_file" ]; then
+			mv "$file" "$new_file" 2> /dev/null
+			short_file=$(echo $file | cut -d '/' -f 6 )
+			new_short_file=$(echo $new_file | cut -d '/' -f 6 )
+			echo "Renamed: $short_file to $new_short_file"
+		fi
     fi
 done
