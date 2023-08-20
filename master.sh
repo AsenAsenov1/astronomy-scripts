@@ -49,7 +49,7 @@ END
 
 
 # SCRIPT START
-echo $cal_dir
+
 # Remove whitespace symbols from filenames.
 $scripts/rm_whitespace.sh $cal_dir
 
@@ -59,13 +59,11 @@ if [ ! -d "$wcs_dir" ]; then
   mkdir -p $wcs_dir
 fi
 
-cd $cal_dir
-
-
 echo ""
 echo "############################           ASTROMETRIC CALIBRATION BEGINS        ############################"
 echo ""
 
+cd $cal_dir
 
 # Run astrometry.net until successful astrometric calibration
 for image in *; do
@@ -84,7 +82,7 @@ done
 
 
 echo ""
-echo "Cleaning up..."
+echo "Cleaning WCS directory from non-wcs files..."
 echo ""
 
 # Delete all except the .wcs file
@@ -98,7 +96,6 @@ echo ""
 decimal_ra=$(fitsheader $wcs_dir/*.wcs | grep -i crval1 | grep -Po "\d+\.\d+")
 decimal_dec=$(fitsheader $wcs_dir/*.wcs | grep -i crval2 | grep -Po "\d+\.\d+")
 
-
 # Convert using Python and capture the result
 converted_ra=$(decimal_to_hms "$decimal_ra")
 converted_dec=$(decimal_to_dms_python "$decimal_dec")
@@ -106,7 +103,6 @@ converted_dec=$(decimal_to_dms_python "$decimal_dec")
 # Split the Python output into separate variables
 read hours minutes seconds <<< "$converted_ra"
 read degrees dec_minutes dec_seconds <<< "$converted_dec"
-
 
 echo "RA values will be applied: $hours $minutes $seconds"
 echo "DEC values will be applied: $degrees $dec_minutes $dec_seconds"
@@ -118,5 +114,8 @@ echo ""
 
 python3 $scripts/edit_header_auto.py $cal_dir $object $hours $minutes $seconds $degrees $dec_minutes $dec_seconds
 
+echo ""
+echo "############################           DONE! READY FOR PHOTOMETRY PIPELINE!        ############################"
+echo ""
 
 # SCRIPT END
