@@ -45,9 +45,6 @@ END
 # FUNCTIONS END
 
 
-
-
-
 # SCRIPT START
 
 # Remove whitespace symbols from filenames.
@@ -63,18 +60,18 @@ echo ""
 echo "############################           ASTROMETRIC CALIBRATION BEGINS        ############################"
 echo ""
 
+# Run astrometry.net until successful astrometric calibration
 cd $cal_dir
 
-# Run astrometry.net until successful astrometric calibration
 for image in *; do
   solve-field --no-plots --cpulimit 5 --scale-low 0.8 --scale-high 1.5 --dir $wcs_dir $image
   target_image_search="$(echo $image | cut -d '.' -f 1).wcs"
   check_image_wcs=$(ls $wcs_dir | grep -i "${target_image_search}")
   if [ "$target_image_search" = "$check_image_wcs" ]; then
-	echo ""
-    echo "############################  Astrometric calibration for image $image is successful!    ############################"
-	echo ""
-    break
+      echo ""
+      echo "############################  Astrometric calibration for image $image is successful!    ############################"
+      echo ""
+      break
   else
     echo "Astrometric calibration for image $image is not successful! Continuing with next one..."
   fi
