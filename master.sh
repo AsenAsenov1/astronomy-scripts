@@ -1,67 +1,122 @@
 #!/bin/bash
 
-dir=$1                # 2023XXXX
-dir_cal=$dir/cal      # 2023XXXX/cal
-wcs_dir=$dir/wcs_out  # 2023XXXX/wcs_out
+# Define directories and input data
+
+dir=$mnt_dir/$1      # 2023XXXX
+cal_dir=$dir/cal     # 2023XXXX/cal
+wcs_dir=$dir/wcs_out # 2023XXXX/wcs_out
 scripts=$mnt_dir/scripts
 object=$2
 
-# Remove whitespace symbols from filenames.
-$scripts/rm_whitespace.sh $dir_cal
 
-# First image from which RA/DEC will be extracted.
-image=$(ls $dir_cal | head -1)
+# FUNCTIONS START
+
+# Decimal RA to HH MM SS function START
+decimal_to_hms() 
+{
+    local decimal_value=$1
+    python3 - <<END
+decimal_value = $decimal_value
+hours = int(decimal_value / 15)
+remainder = decimal_value - (hours * 15)
+minutes = int(remainder * 4)
+seconds = int((remainder - (minutes / 4)) * 240)
+print(f"{hours:02d} {minutes:02d} {seconds:02d}")
+END
+}
+# Decimal RA to HH MM SS function END
+
+
+# Decimal DEC to DD MM SS function START
+decimal_to_dms_python() 
+{
+    local decimal_value=$1
+    python3 - <<END
+decimal_value = $decimal_value
+degrees = int(decimal_value)
+remainder = decimal_value - degrees
+minutes = int(remainder * 60)
+seconds = int((remainder - (minutes / 60)) * 3600)
+print(f"{degrees:02d} {minutes:02d} {seconds:02d}")
+END
+}
+# Decimal DEC to DD MM SS function END
+
+# FUNCTIONS END
+
+
+
+
+
+# SCRIPT START
+echo $cal_dir
+# Remove whitespace symbols from filenames.
+$scripts/rm_whitespace.sh $cal_dir
 
 # Check if wcs_dir exists, if not - create.
 if [ ! -d "$wcs_dir" ]; then
-    echo "WCS directory not found. Creating..."
-    mkdir -p $wcs_dir
+  echo "WCS directory not found. Creating..."
+  mkdir -p $wcs_dir
 fi
 
-# Run astrometry.net
-cd $dir_cal && solve-field --no-plots --cpulimit 30 --scale-low 0.8 --scale-high 1.5 --dir $wcs_dir $image
+cd $cal_dir
 
+
+echo ""
+echo "############################           ASTROMETRIC CALIBRATION BEGINS        ############################"
+echo ""
+
+
+# Run astrometry.net until successful astrometric calibration
+for image in *; do
+  solve-field --no-plots --cpulimit 5 --scale-low 0.8 --scale-high 1.5 --dir $wcs_dir $image
+  target_image_search="$(echo $image | cut -d '.' -f 1).wcs"
+  check_image_wcs=$(ls $wcs_dir | grep -i "${target_image_search}")
+  if [ "$target_image_search" = "$check_image_wcs" ]; then
+	echo ""
+    echo "############################  Astrometric calibration for image $image is successful!    ############################"
+	echo ""
+    break
+  else
+    echo "Astrometric calibration for image $image is not successful! Continuing with next one..."
+  fi
+done
+
+
+echo ""
 echo "Cleaning up..."
+echo ""
 
 # Delete all except the .wcs file
 cd $wcs_dir && rm *.[^w]*
 
-echo "Extraction data results"
+echo ""
+echo "############################            EXTRACTION DATA RESULT        ############################"
+echo ""
 
-# Read .wcs file
-python3 $scripts/extract_ra_dec.py $wcs_dir
-
-# Extracted RA and DEC from WCS file
-ra_extracted=$(cut -d ' ' -f 2-4 $wcs_dir/extraction_data)
-dec_extracted=$(cut -d ' ' -f 5-7 $wcs_dir/extraction_data)
-ra_hh_extracted=$(cut -d ' ' -f 2 $wcs_dir/extraction_data)
-dec_dd_extracted=$(cut -d ' ' -f 5 $wcs_dir/extraction_data)
-
-# Extracted RA and DEC from FITS file
-ra_header=$(fitsheader -t ascii.csv $dir_cal/$image | grep RA | cut -d ',' -f 4)
-dec_header=$(fitsheader -t ascii.csv  $dir_cal/$image | grep DEC | cut -d ',' -f 4)
-ra_hh_header=$(fitsheader -t ascii.csv $dir_cal/$image | grep RA | cut -d ',' -f 4 | cut -d ' ' -f 1)
-dec_dd_header=$(fitsheader -t ascii.csv  $dir_cal/$image | grep DEC | cut -d ',' -f 4 | cut -d ' ' -f 1 | grep -oE '[0-9]+')
-
-# Calculate RA/DEC deviations
-ra_hh_deviation=$(($ra_hh_extracted - $ra_hh_header))
-dec_dd_deviation=$(($dec_dd_extracted - $dec_dd_header))
-
-echo "Header Data, RA: ${ra_header}"
-echo "Header Data, DEC: ${dec_header}"
-echo "[RA] Deviation in Hours: ${ra_hh_deviation}"
-echo "[DEC] Deviation in Degrees: ${dec_dd_deviation}"
+# RA and DEC from WCS file
+decimal_ra=$(fitsheader $wcs_dir/*.wcs | grep -i crval1 | grep -Po "\d+\.\d+")
+decimal_dec=$(fitsheader $wcs_dir/*.wcs | grep -i crval2 | grep -Po "\d+\.\d+")
 
 
-# If RA/DEC deviations are under 1 hour or degree - set header data with the current values otherwise write the values from WCS (astrometry.net)
-if [ "$ra_hh_deviation" -eq 0 ] && [ "$dec_dd_deviation" -eq 0 ]; then
-    echo "Deviation is low."
-    echo "RA values will be applied: ${ra_header}"
-    echo "DEC values will be applied: ${dec_header}"
-    python3 $scripts/edit_header_auto.py $dir_cal $object $ra_header $dec_header
-else
-    echo "Deviation is high."
-    echo "RA values will be applied: ${ra_extracted}"
-    echo "DEC values will be applied: ${dec_extracted}"
-    python3 $scripts/edit_header_auto.py $dir_cal $object $ra_extracted $dec_extracted
-fi
+# Convert using Python and capture the result
+converted_ra=$(decimal_to_hms "$decimal_ra")
+converted_dec=$(decimal_to_dms_python "$decimal_dec")
+
+# Split the Python output into separate variables
+read hours minutes seconds <<< "$converted_ra"
+read degrees dec_minutes dec_seconds <<< "$converted_dec"
+
+
+echo "RA values will be applied: $hours $minutes $seconds"
+echo "DEC values will be applied: $degrees $dec_minutes $dec_seconds"
+echo "OBJECT: $object"
+
+echo ""
+echo "############################           WRITING HEADER DATA BEGINS        ############################"
+echo ""
+
+python3 $scripts/edit_header_auto.py $cal_dir $object $hours $minutes $seconds $degrees $dec_minutes $dec_seconds
+
+
+# SCRIPT END
