@@ -8,12 +8,10 @@ wcs_dir=$dir/wcs_out # 2023XXXX/wcs_out
 scripts=$mnt_dir/scripts
 object=$2
 
-
 # FUNCTIONS START
 
 # Decimal RA to HH MM SS function START
-decimal_to_hms() 
-{
+decimal_to_hms() {
     local decimal_value=$1
     python3 - <<END
 decimal_value = $decimal_value
@@ -26,10 +24,8 @@ END
 }
 # Decimal RA to HH MM SS function END
 
-
 # Decimal DEC to DD MM SS function START
-decimal_to_dms_python() 
-{
+decimal_to_dms_python() {
     local decimal_value=$1
     python3 - <<END
 decimal_value = $decimal_value
@@ -44,7 +40,6 @@ END
 
 # FUNCTIONS END
 
-
 # SCRIPT START
 
 # Remove whitespace symbols from filenames.
@@ -52,8 +47,8 @@ $scripts/rm_whitespace.sh $cal_dir
 
 # Check if wcs_dir exists, if not - create.
 if [ ! -d "$wcs_dir" ]; then
-  echo "WCS directory not found. Creating..."
-  mkdir -p $wcs_dir
+    echo "WCS directory not found. Creating..."
+    mkdir -p $wcs_dir
 fi
 
 echo ""
@@ -64,19 +59,18 @@ echo ""
 cd $cal_dir
 
 for image in *; do
-  solve-field --no-plots --cpulimit 5 --scale-low 0.8 --scale-high 1.5 --dir $wcs_dir $image
-  target_image_search="$(echo $image | cut -d '.' -f 1).wcs"
-  check_image_wcs=$(ls $wcs_dir | grep -i "${target_image_search}")
-  if [ "$target_image_search" = "$check_image_wcs" ]; then
-      echo ""
-      echo "############################  Astrometric calibration for image $image is successful!    ############################"
-      echo ""
-      break
-  else
-    echo "Astrometric calibration for image $image is not successful! Continuing with next one..."
-  fi
+    solve-field --no-plots --cpulimit 5 --scale-low 0.8 --scale-high 1.5 --dir $wcs_dir $image
+    target_image_search="$(echo $image | cut -d '.' -f 1).wcs"
+    check_image_wcs=$(ls $wcs_dir | grep -i "${target_image_search}")
+    if [ "$target_image_search" = "$check_image_wcs" ]; then
+        echo ""
+        echo "############################  Astrometric calibration for image $image is successful!    ############################"
+        echo ""
+        break
+    else
+        echo "Astrometric calibration for image $image is not successful! Continuing with next one..."
+    fi
 done
-
 
 echo ""
 echo "Cleaning WCS directory from non-wcs files..."
@@ -98,8 +92,8 @@ converted_ra=$(decimal_to_hms "$decimal_ra")
 converted_dec=$(decimal_to_dms_python "$decimal_dec")
 
 # Split the Python output into separate variables
-read hours minutes seconds <<< "$converted_ra"
-read degrees dec_minutes dec_seconds <<< "$converted_dec"
+read hours minutes seconds <<<"$converted_ra"
+read degrees dec_minutes dec_seconds <<<"$converted_dec"
 
 echo "RA values will be applied: $hours $minutes $seconds"
 echo "DEC values will be applied: $degrees $dec_minutes $dec_seconds"
